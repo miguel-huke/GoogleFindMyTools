@@ -1,0 +1,48 @@
+name: Map application tests
+
+on:
+  push:
+    paths:
+      - "MapApp/**"
+      - "NovaApi/**"
+      - "Auth/**"
+      - "migrations/**"
+      - "tests/**"
+      - "main.py"
+      - "requirements.txt"
+      - ".github/workflows/test-map-app.yml"
+  pull_request:
+    paths:
+      - "MapApp/**"
+      - "NovaApi/**"
+      - "Auth/**"
+      - "migrations/**"
+      - "tests/**"
+      - "main.py"
+      - "requirements.txt"
+      - ".github/workflows/test-map-app.yml"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Python tests (Google network disabled by fakes)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -B -m unittest discover -s tests -v
+      - name: JavaScript syntax
+        run: node --check MapApp/static/app.js
+      - name: Secret-pattern regression scan
+        shell: bash
+        run: |
+          if rg -l -i '(AIza[0-9A-Za-z_-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|ya29\.[0-9A-Za-z_-]+|gh[pousr]_[0-9A-Za-z]{20,})' MapApp tests main.py; then
+            exit 1
+          fi

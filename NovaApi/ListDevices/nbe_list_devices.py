@@ -40,14 +40,17 @@ def create_device_list_request():
     return hex_payload
 
 
+def get_devices():
+    """Return (display name, canonic ID) pairs without terminal interaction."""
+    result_hex = request_device_list()
+    device_list = parse_device_list_protobuf(result_hex)
+    refresh_custom_trackers(device_list)
+    return get_canonic_ids(device_list)
+
+
 def list_devices():
     print("Loading...")
-    result_hex = request_device_list()
-
-    device_list = parse_device_list_protobuf(result_hex)
-
-    refresh_custom_trackers(device_list)
-    canonic_ids = get_canonic_ids(device_list)
+    canonic_ids = get_devices()
 
     print("")
     print("-" * 50)

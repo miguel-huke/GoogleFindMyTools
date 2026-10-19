@@ -30,7 +30,7 @@ def create_location_request(canonic_device_id, fcm_registration_id, request_uuid
     return hex_payload
 
 
-def get_location_data_for_device(canonic_device_id, name):
+def get_location_data_for_device(canonic_device_id, name, timeout_seconds=60):
 
     print(f"[LocationRequest] Requesting location data for {name}...")
 
@@ -51,10 +51,14 @@ def get_location_data_for_device(canonic_device_id, name):
     hex_payload = create_location_request(canonic_device_id, fcm_token, request_uuid)
     nova_request(NOVA_ACTION_API_SCOPE, hex_payload)
 
-    while result is None:
+    deadline = time.monotonic() + timeout_seconds
+    while result is None and time.monotonic() < deadline:
         time.sleep(0.1)
 
-    decrypt_location_response_locations(result)
+    if result is None:
+        raise TimeoutError(f"Tempo limite excedido ao localizar {name}.")
+
+    return decrypt_location_response_locations(result)
 
 if __name__ == '__main__':
     get_location_data_for_device(get_example_data("sample_canonic_device_id"), "Test")

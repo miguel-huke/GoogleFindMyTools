@@ -124,17 +124,20 @@ def decrypt_location_response_locations(device_update_protobuf):
             )
             location_time_array.append(wrapped_location)
 
-    print("-" * 40)
-    print("[DecryptLocations] Decrypted Locations:")
-
     if not location_time_array:
-        print("No locations found.")
-        return
+        return []
 
+    reports = []
     for loc in location_time_array:
 
         if loc.status == Common_pb2.Status.SEMANTIC:
-            print(f"Semantic Location: {loc.name}")
+            reports.append({
+                "kind": "semantic",
+                "name": loc.name,
+                "timestamp": loc.time,
+                "status": "SEMANTIC",
+                "is_own_report": loc.is_own_report,
+            })
 
         else:
             proto_loc = DeviceUpdate_pb2.Location()
@@ -144,17 +147,18 @@ def decrypt_location_response_locations(device_update_protobuf):
             longitude = proto_loc.longitude / 1e7
             altitude = proto_loc.altitude
 
-            print(f"Latitude: {latitude}")
-            print(f"Longitude: {longitude}")
-            print(f"Altitude: {altitude}")
-            print(f"Google Maps Link: {create_google_maps_link(latitude, longitude)}")
-            
-        print(f"Time: {datetime.datetime.fromtimestamp(loc.time).strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Status: {loc.status}")
-        print(f"Is Own Report: {loc.is_own_report}")
-        print("-" * 40)
+            reports.append({
+                "kind": "point",
+                "latitude": latitude,
+                "longitude": longitude,
+                "altitude": altitude,
+                "accuracy": loc.accuracy,
+                "timestamp": loc.time,
+                "status": Common_pb2.Status.Name(loc.status),
+                "is_own_report": loc.is_own_report,
+            })
 
-    pass
+    return reports
 
 
 if __name__ == '__main__':
