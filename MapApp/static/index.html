@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Find Hub Map</title>
+  <meta name="description" content="Mapa local de relatórios do GoogleFindMyTools">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <header class="brand">
+        <span class="eyebrow">LOCAL · PRIVADO</span>
+        <h1>Find Hub Map</h1>
+        <p>Visualize os reports descriptografados sem enviar coordenadas ao frontend antes da sua ação.</p>
+      </header>
+
+      <div class="actions">
+        <button id="load-devices" class="primary">Conectar e carregar devices</button>
+        <button id="locate-all" disabled>Localizar todos</button>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite">
+        Aguardando conexão. Nenhuma conta foi acessada.
+      </div>
+
+      <section aria-labelledby="devices-title">
+        <div class="section-heading">
+          <h2 id="devices-title">Devices</h2>
+          <span id="device-count">0</span>
+        </div>
+        <div id="device-list" class="device-list"></div>
+      </section>
+
+      <section aria-labelledby="reports-title">
+        <div class="section-heading">
+          <h2 id="reports-title">Reports no mapa</h2>
+          <span id="report-count">0</span>
+        </div>
+        <div id="report-list" class="report-list"></div>
+      </section>
+
+      <footer>
+        Renderização: <a href="https://leafletjs.com" target="_blank" rel="noreferrer">Leaflet</a> ·
+        Dados: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>
+      </footer>
+    </aside>
+
+    <main class="map-panel">
+      <div id="map" aria-label="Mapa dos relatórios dos devices"></div>
+      <div class="map-key" aria-hidden="true">
+        <span><i class="dot own"></i> report próprio</span>
+        <span><i class="dot network"></i> rede Find Hub</span>
+        <span><i class="line"></i> sequência temporal</span>
+      </div>
+    </main>
+  </div>
+
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="/app.js"></script>
+</body>
+</html>
