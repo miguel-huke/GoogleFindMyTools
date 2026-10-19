@@ -14,16 +14,21 @@
       <header class="brand">
         <span class="eyebrow">LOCAL · PRIVADO</span>
         <h1>Find Hub Map</h1>
-        <p>Visualize os reports descriptografados sem enviar coordenadas ao frontend antes da sua ação.</p>
+        <p>Consulte primeiro o cache SQLite. O Google só é acessado quando você inicia uma sincronização.</p>
       </header>
 
       <div class="actions">
-        <button id="load-devices" class="primary">Conectar e carregar devices</button>
-        <button id="locate-all" disabled>Localizar todos</button>
+        <button id="sync-devices" class="primary">Sincronizar devices</button>
+        <button id="refresh-all" disabled>Atualizar localizações</button>
+      </div>
+
+      <div id="job-progress" class="job-progress" hidden>
+        <div class="progress-track"><span id="progress-bar"></span></div>
+        <span id="progress-label">Preparando operação…</span>
       </div>
 
       <div id="status" class="status" role="status" aria-live="polite">
-        Aguardando conexão. Nenhuma conta foi acessada.
+        Carregando dados locais…
       </div>
 
       <section aria-labelledby="devices-title">
@@ -53,7 +58,7 @@
       <div class="map-key" aria-hidden="true">
         <span><i class="dot own"></i> report próprio</span>
         <span><i class="dot network"></i> rede Find Hub</span>
-        <span><i class="line"></i> sequência temporal</span>
+        <span><i class="line"></i> histórico solicitado</span>
       </div>
     </main>
   </div>

@@ -31,6 +31,9 @@ body {
 h1 { margin: 9px 0 8px; font-size: clamp(2rem, 4vw, 3rem); line-height: 0.95; letter-spacing: -0.055em; }
 .brand p { color: var(--muted); line-height: 1.55; margin-bottom: 24px; }
 .actions { display: grid; gap: 10px; }
+.job-progress { margin: 14px 0 -4px; color: var(--muted); font-size: .75rem; }
+.progress-track { height: 6px; margin-bottom: 7px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.08); }
+.progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--mint), var(--cyan)); transition: width .2s ease; }
 button {
   width: 100%; padding: 12px 14px; border-radius: 12px;
   border: 1px solid var(--line); background: rgba(255,255,255,0.035);
@@ -46,10 +49,11 @@ button:disabled { opacity: 0.42; cursor: not-allowed; }
 .section-heading span { min-width: 26px; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.08); text-align: center; font-size: .75rem; }
 .device-list, .report-list { display: grid; gap: 8px; }
 .device, .report { padding: 12px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.025); }
-.device { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+.device { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .device strong, .report strong { display: block; font-size: .9rem; }
 .device small, .report small { color: var(--muted); }
 .device button { width: auto; padding: 7px 10px; font-size: .75rem; }
+.device-actions { display: flex; gap: 6px; }
 .report { cursor: pointer; }
 .report:hover { border-color: rgba(85,242,173,.55); }
 footer { margin-top: 28px; color: var(--muted); font-size: .72rem; line-height: 1.6; }

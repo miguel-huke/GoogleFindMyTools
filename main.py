@@ -13,6 +13,11 @@ def parse_args():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=8765, type=int)
     parser.add_argument(
+        "--database",
+        default=None,
+        help="SQLite path (defaults to the current user's local application data)",
+    )
+    parser.add_argument(
         "--demo",
         action="store_true",
         help="use synthetic device reports without Google authentication",
@@ -32,4 +37,5 @@ if __name__ == '__main__':
         port=args.port,
         demo=args.demo,
         open_browser=not args.no_browser,
+        database_path=args.database,
     )
