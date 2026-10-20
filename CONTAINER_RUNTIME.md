@@ -118,7 +118,7 @@ O Compose deve reutilizar a mesma imagem em todos os modos e definir:
 - sem acesso aos serviços Google;
 - saída diferente de zero se algum teste falhar.
 
-Um serviço Selenium/Chrome separado só será adicionado se o E2E containerizado exigir. Ele não é necessário para o primeiro Compose e não deve bloquear os testes unitários e de integração.
+O override `compose.host-auth.yaml` permite montar um cache privado já existente no host exatamente em `/state/auth/secrets.json`. Ele não cria autenticação e não participa de `demo` ou `test`.
 
 Não haverá serviço PostgreSQL, Redis ou fila enquanto a aplicação não os utilizar. Adicionar recursos fictícios não simula o sistema real.
 
@@ -136,15 +136,18 @@ Logs devem registrar somente inicialização, modo, estado de jobs e códigos de
 
 ## 9. Autenticação Google
 
-A primeira autenticação pode exigir Chrome interativo. Portanto:
+O modo opcional de cache do host obedece às seguintes regras:
 
 - `demo`, `test` e homologação sintética não dependem de Chrome;
 - uma sessão real não pode ser criada automaticamente durante build ou startup;
 - o cache não pode ser copiado da máquina do desenvolvedor para a imagem;
-- `cloud-single` fica condicional a um fluxo documentado de provisionamento/renovação do cache;
+- apenas um arquivo existente é montado por bind; ele não entra na imagem nem no Git;
+- o caminho vem de `GFMT_HOST_AUTH_FILE` no ambiente local;
+- o arquivo nunca deve ser exibido, copiado para artefatos ou incluído em logs;
+- o override não executa navegador automatizado nem promete renovar um cache inválido;
 - expiração deve produzir erro sanitizado e não reinício infinito.
 
-A instalação de Chrome dentro da imagem de runtime não será presumida. Ela só será adicionada após teste que demonstre sua necessidade e um fluxo de autenticação compatível com o ambiente escolhido.
+Chrome não faz parte da imagem de runtime. Login por Selenium dentro do Docker não é suportado.
 
 ## 10. Contexto de build
 

@@ -36,7 +36,7 @@ COPY SpotApi ./SpotApi
 COPY migrations ./migrations
 COPY scripts ./scripts
 COPY tests ./tests
-COPY Dockerfile compose.yaml .dockerignore ./
+COPY Dockerfile compose.yaml compose.host-auth.yaml .dockerignore ./
 COPY main.py chrome_driver.py example_data_provider.py ./
 COPY LICENSE CITATION.cff THIRD_PARTY_NOTICES.md ./
 

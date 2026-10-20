@@ -14,6 +14,7 @@ on:
       - "Dockerfile"
       - ".dockerignore"
       - "compose.yaml"
+      - "compose.host-auth.yaml"
       - ".github/workflows/test-map-app.yml"
   pull_request:
     paths:
@@ -28,6 +29,7 @@ on:
       - "Dockerfile"
       - ".dockerignore"
       - "compose.yaml"
+      - "compose.host-auth.yaml"
       - ".github/workflows/test-map-app.yml"
 
 jobs:
@@ -52,9 +54,11 @@ jobs:
         run: |
           docker compose config --quiet
           docker compose --profile real --profile test config --quiet
+          touch /tmp/gfmt-empty-secrets.json
+          GFMT_HOST_AUTH_FILE=/tmp/gfmt-empty-secrets.json docker compose -f compose.yaml -f compose.host-auth.yaml --profile real config --quiet
       - name: Secret-pattern regression scan
         shell: bash
         run: |
-          if rg -l -i '(AIza[0-9A-Za-z_-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|ya29\.[0-9A-Za-z_-]+|gh[pousr]_[0-9A-Za-z]{20,})' MapApp tests scripts main.py Dockerfile compose.yaml .dockerignore; then
+          if rg -l -i '(AIza[0-9A-Za-z_-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|ya29\.[0-9A-Za-z_-]+|gh[pousr]_[0-9A-Za-z]{20,})' MapApp tests scripts main.py Dockerfile compose.yaml compose.host-auth.yaml .dockerignore; then
             exit 1
           fi

@@ -106,13 +106,16 @@ Stop containers without deleting named volumes:
 docker compose down
 ```
 
-The `real` profile is explicit and uses separate database and authentication volumes:
+The `real` profile is explicit and uses separate database and authentication volumes. If a private cache already exists on the Windows host, the optional override mounts that single file into the container without copying it into the image:
 
 ```powershell
-docker compose --profile real up --build app-real
+$env:GFMT_HOST_AUTH_FILE = (Resolve-Path .\Auth\secrets.json).Path
+docker compose --profile real stop app-real
+docker compose -f compose.yaml -f compose.host-auth.yaml --profile real config --quiet
+docker compose -f compose.yaml -f compose.host-auth.yaml --profile real up --build --detach app-real
 ```
 
-It is available at `http://127.0.0.1:8766/` by default. The image intentionally does not include Chrome and cannot assume that first-time interactive Google authentication will work inside a headless container. Do not copy `Auth/secrets.json` into the image or commit it. Real container validation remains manual, private and conditional on a documented authentication provisioning flow.
+The application is then available at `http://127.0.0.1:8766/`. This override does not create or repair authentication: the cache must already be valid. Never display, copy, share or commit it. Automated login is intentionally not provided because Google rejects software-controlled sign-in.
 
 Cloud deployment must use a single application replica while SQLite is active and must place the container behind authenticated TLS ingress. The image is not safe to publish directly to the internet. See [CONTAINER_RUNTIME.md](CONTAINER_RUNTIME.md) for the complete runtime and security contract.
 

@@ -1039,6 +1039,8 @@ Código que contradiga este documento deve corrigir o código ou atualizar expli
 
 O contrato vinculante para Dockerfile, Docker Compose, persistência, exposição de rede, autenticação, healthcheck e validação está em [`CONTAINER_RUNTIME.md`](CONTAINER_RUNTIME.md).
 
+O override opcional [`compose.host-auth.yaml`](compose.host-auth.yaml) monta um cache privado já existente no Windows diretamente em `/state/auth/secrets.json`. Esse fluxo não copia o cache para a imagem e não cria ou renova autenticação. Login automatizado no Docker permanece fora do contrato.
+
 O bloco INFRA-001 definiu que:
 
 - Compose local publica somente em loopback;

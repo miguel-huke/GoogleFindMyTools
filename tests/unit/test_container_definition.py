@@ -16,6 +16,7 @@ class ContainerDefinitionTest(unittest.TestCase):
         self.assertIn('CMD ["python", "-B", "main.py", "--no-browser"]', dockerfile)
         self.assertIn("GFMT_DATABASE_PATH=/data/find_hub.db", dockerfile)
         self.assertIn("/state/auth/secrets.json", dockerfile)
+        self.assertIn("compose.host-auth.yaml", dockerfile)
         self.assertNotIn("COPY . .", dockerfile)
         self.assertNotIn("secrets.json ./", dockerfile)
 
@@ -51,6 +52,7 @@ class ContainerDefinitionTest(unittest.TestCase):
         }
 
         self.assertTrue(required_rules.issubset(set(dockerignore)))
+        self.assertIn("!compose.host-auth.yaml", dockerignore)
 
     def test_compose_defines_isolated_demo_real_and_test_services(self):
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
@@ -67,6 +69,13 @@ class ContainerDefinitionTest(unittest.TestCase):
         self.assertIn("no-new-privileges:true", compose)
         self.assertIn("cap_drop:\n    - ALL", compose)
         self.assertNotIn("Auth/secrets.json:", compose)
+
+    def test_host_auth_override_binds_private_file_without_embedding_credentials(self):
+        override = (ROOT / "compose.host-auth.yaml").read_text(encoding="utf-8")
+
+        self.assertIn("GFMT_HOST_AUTH_FILE", override)
+        self.assertIn("target: /state/auth/secrets.json", override)
+        self.assertNotIn("Auth/secrets.json", override)
 
 
 if __name__ == "__main__":

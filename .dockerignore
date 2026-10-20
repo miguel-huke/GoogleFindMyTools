@@ -3,6 +3,7 @@
 !requirements.txt
 !Dockerfile
 !compose.yaml
+!compose.host-auth.yaml
 !.dockerignore
 !main.py
 !chrome_driver.py
