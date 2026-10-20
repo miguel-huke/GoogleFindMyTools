@@ -1,0 +1,81 @@
+name: googlefindmytools
+
+x-runtime: &runtime
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: ${GFMT_IMAGE:-googlefindmytools-map:local}
+  init: true
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001,mode=1777
+  stop_grace_period: 10s
+
+services:
+  app:
+    <<: *runtime
+    environment:
+      GFMT_MODE: demo
+      GFMT_BIND_HOST: 0.0.0.0
+      GFMT_PORT: "8765"
+      GFMT_DATABASE_PATH: /data/find_hub.db
+      GFMT_ALLOW_NON_LOOPBACK: "true"
+      GFMT_TRUSTED_HOSTS: 127.0.0.1:8765,localhost:8765,127.0.0.1:${GFMT_DEMO_PORT:-8765},localhost:${GFMT_DEMO_PORT:-8765}
+      GFMT_TRUSTED_ORIGINS: http://127.0.0.1:${GFMT_DEMO_PORT:-8765},http://localhost:${GFMT_DEMO_PORT:-8765}
+    ports:
+      - "127.0.0.1:${GFMT_DEMO_PORT:-8765}:8765"
+    volumes:
+      - gfmt-demo-data:/data
+    restart: unless-stopped
+
+  app-real:
+    <<: *runtime
+    profiles:
+      - real
+    environment:
+      GFMT_MODE: real
+      GFMT_BIND_HOST: 0.0.0.0
+      GFMT_PORT: "8765"
+      GFMT_DATABASE_PATH: /data/find_hub.db
+      GFMT_ALLOW_NON_LOOPBACK: "true"
+      GFMT_TRUSTED_HOSTS: 127.0.0.1:8765,localhost:8765,127.0.0.1:${GFMT_REAL_PORT:-8766},localhost:${GFMT_REAL_PORT:-8766}
+      GFMT_TRUSTED_ORIGINS: http://127.0.0.1:${GFMT_REAL_PORT:-8766},http://localhost:${GFMT_REAL_PORT:-8766}
+    ports:
+      - "127.0.0.1:${GFMT_REAL_PORT:-8766}:8765"
+    volumes:
+      - gfmt-real-data:/data
+      - gfmt-real-auth:/state/auth
+    restart: unless-stopped
+
+  tests:
+    <<: *runtime
+    profiles:
+      - test
+    command:
+      - python
+      - -B
+      - -m
+      - unittest
+      - discover
+      - -s
+      - tests
+      - -v
+    environment:
+      GFMT_MODE: demo
+      GFMT_BIND_HOST: 127.0.0.1
+      GFMT_ALLOW_NON_LOOPBACK: "false"
+      GFMT_TRUSTED_HOSTS: ""
+      GFMT_TRUSTED_ORIGINS: ""
+    network_mode: none
+    healthcheck:
+      disable: true
+    restart: "no"
+
+volumes:
+  gfmt-demo-data:
+  gfmt-real-data:
+  gfmt-real-auth:

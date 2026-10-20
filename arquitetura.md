@@ -1034,3 +1034,19 @@ Toda mudança arquitetural deve atualizar, no mesmo PR:
 6. bloco do plano e Definition of Done.
 
 Código que contradiga este documento deve corrigir o código ou atualizar explicitamente a decisão; divergência silenciosa não é aceita.
+
+## 28. Extensão de infraestrutura em contêiner
+
+O contrato vinculante para Dockerfile, Docker Compose, persistência, exposição de rede, autenticação, healthcheck e validação está em [`CONTAINER_RUNTIME.md`](CONTAINER_RUNTIME.md).
+
+O bloco INFRA-001 definiu que:
+
+- Compose local publica somente em loopback;
+- execução em nuvem exige TLS e autenticação em proxy/gateway;
+- SQLite containerizado opera com uma única réplica e volume persistente;
+- banco e cache de autenticação nunca entram na imagem;
+- modo demo é o padrão e modo real exige opt-in explícito;
+- a proteção atual de bind, `Host`, `Origin` e CSRF só pode ser flexibilizada por configuração restrita e testada;
+- nenhum commit de infraestrutura será feito antes de build, execução, testes, persistência e auditoria local.
+
+Estado: **INFRA-001 a INFRA-007 COMPLETOS**. A imagem foi construída sem cache e validada como não root; healthcheck, frontend/API, sincronização demo, mapa, persistência após recriação, suíte sem rede, auditoria de segredos e desligamento limpo foram aprovados. O modo real com Google continua manual e opt-in. Evidências: [`artifacts/INFRA-006-VALIDATION.md`](artifacts/INFRA-006-VALIDATION.md). O conjunto foi revisado e publicado em um pull request sucessor, sem executar merge. Próximo bloco opcional: acompanhar o CI e responder à revisão do cliente.

@@ -9,8 +9,11 @@ import time
 import unittest
 import urllib.request
 from pathlib import Path
+from unittest import mock
 
 from MapApp.server import create_server
+from MapApp.presentation.http import HttpExposurePolicy
+from main import parse_args
 
 
 class MapAppBootstrapTest(unittest.TestCase):
@@ -118,6 +121,85 @@ class MapAppBootstrapTest(unittest.TestCase):
                         self.fail("main.py did not start the API v1 server")
                     time.sleep(0.05)
             self.assertEqual(payload["api_version"], "v1")
+        finally:
+            if process.poll() is None:
+                process.terminate()
+            process.communicate(timeout=5)
+
+    def test_container_environment_builds_explicit_exposure_policy(self):
+        environment = {
+            "GFMT_MODE": "demo",
+            "GFMT_BIND_HOST": "0.0.0.0",
+            "GFMT_PORT": "8765",
+            "GFMT_DATABASE_PATH": "/data/find_hub.db",
+            "GFMT_ALLOW_NON_LOOPBACK": "true",
+            "GFMT_TRUSTED_HOSTS": "localhost:8765,app.example.com",
+            "GFMT_TRUSTED_ORIGINS": "http://localhost:8765,https://app.example.com",
+        }
+        with mock.patch.dict(os.environ, environment):
+            args = parse_args([])
+
+        policy = HttpExposurePolicy(
+            allow_non_loopback_bind=args.allow_non_loopback,
+            trusted_hosts=tuple(args.trusted_host),
+            trusted_origins=tuple(args.trusted_origin),
+        )
+        self.assertTrue(args.demo)
+        self.assertEqual(args.host, "0.0.0.0")
+        self.assertEqual(args.port, 8765)
+        self.assertEqual(args.database, "/data/find_hub.db")
+        self.assertTrue(policy.allow_non_loopback_bind)
+        self.assertEqual(policy.trusted_hosts, ("localhost:8765", "app.example.com"))
+        self.assertEqual(
+            policy.trusted_origins,
+            ("http://localhost:8765", "https://app.example.com"),
+        )
+
+    def test_main_py_starts_with_explicit_container_environment(self):
+        with socket.socket() as reservation:
+            reservation.bind(("127.0.0.1", 0))
+            port = reservation.getsockname()[1]
+        authority = f"container.test:{port}"
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "GFMT_MODE": "demo",
+                "GFMT_BIND_HOST": "0.0.0.0",
+                "GFMT_PORT": str(port),
+                "GFMT_DATABASE_PATH": str(Path(self.temp_dir.name) / "container-cli.db"),
+                "GFMT_ALLOW_NON_LOOPBACK": "true",
+                "GFMT_TRUSTED_HOSTS": authority,
+                "GFMT_TRUSTED_ORIGINS": f"http://{authority}",
+            }
+        )
+        process = subprocess.Popen(
+            [sys.executable, "-u", "-B", "main.py", "--no-browser"],
+            cwd=Path(__file__).resolve().parents[1],
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            deadline = time.monotonic() + 8
+            while True:
+                try:
+                    request = urllib.request.Request(
+                        f"http://127.0.0.1:{port}/api/v1/health",
+                        headers={"Host": authority},
+                    )
+                    with urllib.request.urlopen(request, timeout=0.5) as response:
+                        payload = json.load(response)
+                    break
+                except Exception:
+                    if process.poll() is not None:
+                        stdout, stderr = process.communicate(timeout=2)
+                        self.fail(f"container-configured main.py exited early: {stdout} {stderr}")
+                    if time.monotonic() >= deadline:
+                        self.fail("container-configured main.py did not start")
+                    time.sleep(0.05)
+            self.assertEqual(payload, {"status": "ok", "api_version": "v1", "database": "ok"})
         finally:
             if process.poll() is None:
                 process.terminate()

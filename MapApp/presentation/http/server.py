@@ -49,6 +49,66 @@ CONTENT_SECURITY_POLICY = (
 )
 
 
+def _normalize_authority(value: str) -> str:
+    candidate = value.strip()
+    if not candidate or any(character in candidate for character in "\r\n,\\/") or "://" in candidate:
+        raise ValueError("Trusted hosts must be exact host[:port] authorities.")
+    try:
+        parsed = urlsplit(f"//{candidate}")
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("Trusted hosts must be exact host[:port] authorities.") from exc
+    if hostname is None or parsed.username is not None or parsed.password is not None or "*" in hostname:
+        raise ValueError("Trusted hosts must not contain credentials or wildcards.")
+    normalized_host = hostname.lower()
+    if ":" in normalized_host:
+        normalized_host = f"[{normalized_host}]"
+    return f"{normalized_host}:{port}" if port is not None else normalized_host
+
+
+def _normalize_origin(value: str) -> str:
+    candidate = value.strip()
+    try:
+        parsed = urlsplit(candidate)
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("Trusted origins must be exact HTTP(S) origins.") from exc
+    if (
+        parsed.scheme.lower() not in {"http", "https"}
+        or hostname is None
+        or parsed.username is not None
+        or parsed.password is not None
+        or "*" in hostname
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError("Trusted origins must be exact HTTP(S) origins without paths or wildcards.")
+    normalized_host = hostname.lower()
+    if ":" in normalized_host:
+        normalized_host = f"[{normalized_host}]"
+    default_port = 80 if parsed.scheme.lower() == "http" else 443
+    authority = normalized_host if port in {None, default_port} else f"{normalized_host}:{port}"
+    return f"{parsed.scheme.lower()}://{authority}"
+
+
+@dataclass(frozen=True, slots=True)
+class HttpExposurePolicy:
+    """Explicit opt-in policy for serving through a container or trusted proxy."""
+
+    allow_non_loopback_bind: bool = False
+    trusted_hosts: tuple[str, ...] = ()
+    trusted_origins: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        hosts = tuple(dict.fromkeys(_normalize_authority(value) for value in self.trusted_hosts))
+        origins = tuple(dict.fromkeys(_normalize_origin(value) for value in self.trusted_origins))
+        object.__setattr__(self, "trusted_hosts", hosts)
+        object.__setattr__(self, "trusted_origins", origins)
+
+
 @dataclass(frozen=True, slots=True)
 class ApiServices:
     queries: QueryMapState
@@ -78,7 +138,8 @@ def _http_status(error: ApplicationError) -> HTTPStatus:
     return HTTPStatus.INTERNAL_SERVER_ERROR
 
 
-def create_api_handler(services: ApiServices):
+def create_api_handler(services: ApiServices, exposure_policy: HttpExposurePolicy | None = None):
+    policy = exposure_policy or HttpExposurePolicy()
     csrf_token = secrets.token_urlsafe(32)
 
     class ApiRequestHandler(BaseHTTPRequestHandler):
@@ -235,11 +296,14 @@ def create_api_handler(services: ApiServices):
             if not raw_host or any(character in raw_host for character in "\r\n,\\"):
                 return False
             try:
-                parsed = urlsplit(f"//{raw_host}")
-                hostname = parsed.hostname
-                port = parsed.port
+                authority = _normalize_authority(raw_host)
             except ValueError:
                 return False
+            if policy.trusted_hosts:
+                return authority in policy.trusted_hosts
+            parsed = urlsplit(f"//{authority}")
+            hostname = parsed.hostname
+            port = parsed.port
             if hostname is None or hostname.lower() not in LOOPBACK_HOSTS:
                 return False
             expected_port = int(self.server.server_address[1])
@@ -250,11 +314,14 @@ def create_api_handler(services: ApiServices):
             if not origin or origin == "null":
                 return False
             try:
-                parsed = urlparse(origin)
-                hostname = parsed.hostname
-                origin_port = parsed.port
+                normalized_origin = _normalize_origin(origin)
             except ValueError:
                 return False
+            if policy.trusted_origins:
+                return normalized_origin in policy.trusted_origins
+            parsed = urlparse(origin)
+            hostname = parsed.hostname
+            origin_port = parsed.port
             expected_port = int(self.server.server_address[1])
             return (
                 parsed.scheme == "http"
@@ -324,9 +391,14 @@ def create_api_server(
     host: str = "127.0.0.1",
     port: int = 0,
     on_close: CloseCallback | None = None,
+    exposure_policy: HttpExposurePolicy | None = None,
 ) -> ThreadingHTTPServer:
-    if host.lower() not in LOOPBACK_HOSTS:
+    policy = exposure_policy or HttpExposurePolicy()
+    is_loopback = host.lower() in LOOPBACK_HOSTS
+    if not is_loopback and not policy.allow_non_loopback_bind:
         raise ValueError("The API server may only bind to a loopback host.")
+    if not is_loopback and (not policy.trusted_hosts or not policy.trusted_origins):
+        raise ValueError("Non-loopback bind requires explicit trusted hosts and origins.")
 
     class LocalApiServer(ThreadingHTTPServer):
         daemon_threads = True
@@ -344,4 +416,4 @@ def create_api_server(
                     self._resources_closed = True
                     on_close()
 
-    return LocalApiServer((host, port), create_api_handler(services))
+    return LocalApiServer((host, port), create_api_handler(services, policy))
