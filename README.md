@@ -71,6 +71,10 @@ python -B -m unittest tests.e2e.test_frontend_v1 -v
 
 Real-account smoke testing is manual/opt-in. See [the architecture blueprint](arquitetura.md) and the sanitized [ARCH-013 smoke record](artifacts/ARCH-013-SMOKE.md). Never record real coordinates, device names, internal IDs, tokens or decrypted payloads in test artifacts.
 
+### Frontend and Kezpo design
+
+The operational interface follows the Kezpo visual identity, supports desktop, tablet and smartphone layouts, keyboard navigation and reduced motion. See [FRONTEND.md](FRONTEND.md) for the complete UI flow, responsive contract and browser-validation commands. Brand tokens and asset provenance are documented in [KEZPO_DESIGN_SYSTEM.md](KEZPO_DESIGN_SYSTEM.md).
+
 ### Containers
 
 Docker Desktop or another Docker Engine with Compose v2 is required. The default Compose service is synthetic demo mode and does not authenticate with Google.

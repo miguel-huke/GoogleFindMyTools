@@ -38,6 +38,10 @@ SessionStatus = Callable[[], bool]
 TileProvider = Callable[[int, int, int], tuple[bytes, str]]
 CloseCallback = Callable[[], None]
 STATIC_ROOT = Path(__file__).resolve().parents[2] / "static"
+STATIC_CONTENT_TYPES = {
+    ".ttf": "font/ttf",
+    ".webp": "image/webp",
+}
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 CSRF_HEADER = "X-FindHub-CSRF"
 CONTENT_SECURITY_POLICY = (
@@ -281,7 +285,11 @@ def create_api_handler(services: ApiServices, exposure_policy: HttpExposurePolic
             if not candidate.is_file():
                 raise NotFoundError()
             payload = candidate.read_bytes()
-            content_type = mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"
+            content_type = (
+                STATIC_CONTENT_TYPES.get(candidate.suffix.lower())
+                or mimetypes.guess_type(candidate.name)[0]
+                or "application/octet-stream"
+            )
             if content_type.startswith("text/") or content_type in {"application/javascript", "application/json"}:
                 content_type += "; charset=utf-8"
             self.send_response(HTTPStatus.OK)
