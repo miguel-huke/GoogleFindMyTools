@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import signal
 import threading
 import webbrowser
 from collections import OrderedDict
@@ -27,7 +28,7 @@ from MapApp.infrastructure.google import (
     LegacyNovaTransport,
 )
 from MapApp.infrastructure.persistence import SQLiteUnitOfWork, default_database_path
-from MapApp.presentation.http import ApiServices, create_api_server
+from MapApp.presentation.http import ApiServices, HttpExposurePolicy, create_api_server
 
 
 OSM_TILE_ORIGIN = "https://tile.openstreetmap.org/"
@@ -98,6 +99,7 @@ def create_server(
     gateway: GoogleGateway | None = None,
     tile_fetcher=fetch_osm_tile,
     database_path: str | Path | None = None,
+    exposure_policy: HttpExposurePolicy | None = None,
 ):
     """Wire domain, persistence, integrations, jobs and HTTP into one local server."""
 
@@ -146,6 +148,7 @@ def create_server(
             host=host,
             port=port,
             on_close=coordinator.close,
+            exposure_policy=exposure_policy,
         )
     except Exception:
         coordinator.close()
@@ -158,12 +161,14 @@ def run_map_app(
     demo: bool = False,
     open_browser: bool = True,
     database_path: str | Path | None = None,
+    exposure_policy: HttpExposurePolicy | None = None,
 ) -> None:
     server = create_server(
         host=host,
         port=port,
         demo=demo,
         database_path=database_path,
+        exposure_policy=exposure_policy,
     )
     actual_port = server.server_address[1]
     url = f"http://{host}:{actual_port}/"
@@ -174,9 +179,19 @@ def run_map_app(
         browser_timer = threading.Timer(0.3, lambda: webbrowser.open(url))
         browser_timer.daemon = True
         browser_timer.start()
+    previous_sigterm = None
+    if threading.current_thread() is threading.main_thread():
+        previous_sigterm = signal.getsignal(signal.SIGTERM)
+
+        def stop_on_sigterm(_signum, _frame):
+            raise KeyboardInterrupt
+
+        signal.signal(signal.SIGTERM, stop_on_sigterm)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
         server.server_close()
+        if previous_sigterm is not None:
+            signal.signal(signal.SIGTERM, previous_sigterm)

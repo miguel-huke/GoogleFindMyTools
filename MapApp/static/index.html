@@ -5,46 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Find Hub Map</title>
   <meta name="description" content="Mapa local de relatórios do GoogleFindMyTools">
+  <link rel="icon" type="image/png" href="/assets/brand/kezpo-favicon.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <a class="skip-link" href="#map">Ir para o mapa</a>
   <div class="app-shell">
-    <aside class="sidebar">
+    <aside id="device-panel" class="sidebar" aria-label="Controles e dados de localização">
       <header class="brand">
-        <span class="eyebrow">LOCAL · PRIVADO</span>
+        <div class="brand-lockup">
+          <img id="kezpo-logo" class="brand-logo" src="/assets/brand/kezpo-logo.webp" alt="Kezpo Solutions">
+          <span id="kezpo-logo-fallback" class="brand-logo-fallback" hidden>Kezpo Solutions</span>
+        </div>
+        <div class="brand-context">
+          <span class="eyebrow">OPERAÇÕES DE LOCALIZAÇÃO</span>
+          <span class="environment-badge">LOCAL · PRIVADO</span>
+        </div>
         <h1>Find Hub Map</h1>
         <p>Consulte primeiro o cache SQLite. O Google só é acessado quando você inicia uma sincronização.</p>
       </header>
 
       <div class="actions">
-        <button id="sync-devices" class="primary">Sincronizar devices</button>
-        <button id="refresh-all" disabled>Atualizar localizações</button>
+        <button id="sync-devices" class="primary" type="button">Sincronizar devices</button>
+        <button id="refresh-all" type="button" disabled>Atualizar localizações</button>
       </div>
 
       <div id="job-progress" class="job-progress" hidden>
-        <div class="progress-track"><span id="progress-bar"></span></div>
+        <div class="progress-track" role="progressbar" aria-labelledby="progress-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="progress-bar"></span></div>
         <span id="progress-label">Preparando operação…</span>
       </div>
 
-      <div id="status" class="status" role="status" aria-live="polite">
+      <div id="status" class="status info" role="status" aria-live="polite" aria-atomic="true">
         Carregando dados locais…
       </div>
 
       <section aria-labelledby="devices-title">
         <div class="section-heading">
           <h2 id="devices-title">Devices</h2>
-          <span id="device-count">0</span>
+          <span id="device-count" aria-label="Quantidade de devices">0</span>
         </div>
-        <div id="device-list" class="device-list"></div>
+        <div id="device-list" class="device-list">
+          <div class="empty-state loading-state" role="status"><strong>Carregando devices…</strong><span>Consultando o cache SQLite local.</span></div>
+        </div>
       </section>
 
       <section aria-labelledby="reports-title">
         <div class="section-heading">
           <h2 id="reports-title">Reports no mapa</h2>
-          <span id="report-count">0</span>
+          <span id="report-count" aria-label="Quantidade de reports no mapa">0</span>
         </div>
-        <div id="report-list" class="report-list"></div>
+        <div id="report-list" class="report-list">
+          <div class="empty-state loading-state" role="status"><strong>Carregando reports…</strong><span>Preparando as localizações salvas.</span></div>
+        </div>
       </section>
 
       <footer>
@@ -53,13 +66,28 @@
       </footer>
     </aside>
 
-    <main class="map-panel">
-      <div id="map" aria-label="Mapa dos relatórios dos devices"></div>
-      <div class="map-key" aria-hidden="true">
-        <span><i class="dot own"></i> report próprio</span>
-        <span><i class="dot network"></i> rede Find Hub</span>
-        <span><i class="line"></i> histórico solicitado</span>
+    <main class="map-panel" aria-labelledby="map-title">
+      <h2 id="map-title" class="sr-only">Mapa de localizações dos devices</h2>
+      <p id="map-description" class="sr-only">As localizações exibidas visualmente também estão disponíveis como botões na seção Reports no mapa.</p>
+      <button id="panel-toggle" class="panel-toggle" type="button" aria-controls="device-panel" aria-expanded="true">
+        <span class="panel-toggle-icon" aria-hidden="true">☰</span>
+        <span id="panel-toggle-label">Ocultar painel</span>
+      </button>
+      <div id="map" role="region" aria-labelledby="map-title" aria-describedby="map-description" tabindex="0"></div>
+      <div class="map-tools" role="group" aria-label="Ações do mapa">
+        <button id="fit-reports" type="button" disabled>Enquadrar reports</button>
       </div>
+      <div id="map-empty" class="map-empty">
+        <strong>Nenhuma localização no mapa</strong>
+        <span id="map-empty-detail">Sincronize os devices e atualize as localizações.</span>
+      </div>
+      <p id="map-summary" class="map-summary" role="status" aria-live="polite">Nenhum report visível</p>
+      <section class="map-key" aria-labelledby="map-key-title">
+        <h2 id="map-key-title" class="sr-only">Legenda do mapa</h2>
+        <span><i class="dot own" aria-hidden="true"></i> report próprio</span>
+        <span><i class="dot network" aria-hidden="true"></i> rede Find Hub</span>
+        <span><i class="line" aria-hidden="true"></i> histórico solicitado</span>
+      </section>
     </main>
   </div>
 

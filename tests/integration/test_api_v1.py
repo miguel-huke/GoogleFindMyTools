@@ -22,7 +22,7 @@ from MapApp.domain.models import (
     SyncState,
 )
 from MapApp.infrastructure.persistence import SQLiteUnitOfWork
-from MapApp.presentation.http import ApiServices, create_api_server
+from MapApp.presentation.http import ApiServices, HttpExposurePolicy, create_api_server
 
 
 class ApiV1IntegrationTest(unittest.TestCase):
@@ -195,6 +195,81 @@ class ApiV1IntegrationTest(unittest.TestCase):
     def test_server_refuses_non_loopback_bind(self):
         with self.assertRaisesRegex(ValueError, "loopback"):
             create_api_server(self.services, host="0.0.0.0", port=0)
+
+    def test_non_loopback_requires_complete_explicit_policy(self):
+        incomplete = HttpExposurePolicy(allow_non_loopback_bind=True)
+        with self.assertRaisesRegex(ValueError, "trusted hosts and origins"):
+            create_api_server(self.services, host="0.0.0.0", port=0, exposure_policy=incomplete)
+
+        with self.assertRaisesRegex(ValueError, "wildcards"):
+            HttpExposurePolicy(trusted_hosts=("*.example.com",))
+        with self.assertRaisesRegex(ValueError, "without paths or wildcards"):
+            HttpExposurePolicy(trusted_origins=("https://app.example.com/path",))
+
+    def test_explicit_container_policy_accepts_only_configured_host_and_origin(self):
+        policy = HttpExposurePolicy(
+            allow_non_loopback_bind=True,
+            trusted_hosts=("app.example.com",),
+            trusted_origins=("https://app.example.com",),
+        )
+        server = create_api_server(
+            self.services,
+            host="0.0.0.0",
+            port=0,
+            exposure_policy=policy,
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_address[1]}"
+
+        def request(path, method="GET", headers=None):
+            outgoing = urllib.request.Request(base_url + path, method=method, headers=headers or {})
+            try:
+                with urllib.request.urlopen(outgoing, timeout=3) as response:
+                    return response.status, json.load(response)
+            except urllib.error.HTTPError as error:
+                return error.code, json.load(error)
+
+        try:
+            status, health = request("/api/v1/health", headers={"Host": "app.example.com"})
+            self.assertEqual(status, 200)
+            self.assertEqual(health["status"], "ok")
+
+            status, rejected = request("/api/v1/health", headers={"Host": "attacker.example"})
+            self.assertEqual(status, 421)
+            self.assertEqual(rejected["error"]["code"], "invalid_host")
+
+            status, session = request("/api/v1/session", headers={"Host": "app.example.com"})
+            self.assertEqual(status, 200)
+            token = session["csrf_token"]
+
+            status, rejected = request(
+                "/api/v1/sync/devices",
+                method="POST",
+                headers={
+                    "Host": "app.example.com",
+                    "Origin": "https://attacker.example",
+                    "X-FindHub-CSRF": token,
+                },
+            )
+            self.assertEqual(status, 403)
+            self.assertEqual(rejected["error"]["code"], "invalid_origin")
+
+            status, accepted = request(
+                "/api/v1/sync/devices",
+                method="POST",
+                headers={
+                    "Host": "app.example.com",
+                    "Origin": "https://app.example.com",
+                    "X-FindHub-CSRF": token,
+                },
+            )
+            self.assertEqual(status, 202)
+            self.assertEqual(accepted["operation"], "SYNC_DEVICES")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
 
     def test_server_suppresses_connection_handler_tracebacks(self):
         stderr = io.StringIO()

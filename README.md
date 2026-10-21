@@ -41,6 +41,9 @@ Useful options:
 --database PATH        override the per-user SQLite path
 --demo                 synthetic, network-free Google gateway
 --no-browser           do not open the default browser automatically
+--allow-non-loopback   container-only opt-in; requires trusted hosts and origins
+--trusted-host VALUE   exact accepted Host authority; may be repeated
+--trusted-origin URL   exact accepted HTTP(S) Origin; may be repeated
 ```
 
 Without `--database`, data is stored under `%LOCALAPPDATA%\GoogleFindMyTools\find_hub.db` on Windows. The database contains location history and must be treated as private. Do not place it inside the repository or attach it to issues and pull requests.
@@ -68,13 +71,65 @@ python -B -m unittest tests.e2e.test_frontend_v1 -v
 
 Real-account smoke testing is manual/opt-in. See [the architecture blueprint](arquitetura.md) and the sanitized [ARCH-013 smoke record](artifacts/ARCH-013-SMOKE.md). Never record real coordinates, device names, internal IDs, tokens or decrypted payloads in test artifacts.
 
+### Frontend and Kezpo design
+
+The operational interface follows the Kezpo visual identity, supports desktop, tablet and smartphone layouts, keyboard navigation and reduced motion. See [FRONTEND.md](FRONTEND.md) for the complete UI flow, responsive contract and browser-validation commands. Brand tokens and asset provenance are documented in [KEZPO_DESIGN_SYSTEM.md](KEZPO_DESIGN_SYSTEM.md).
+
+### Containers
+
+Docker Desktop or another Docker Engine with Compose v2 is required. The default Compose service is synthetic demo mode and does not authenticate with Google.
+
+Validate definitions and start the demo:
+
+```powershell
+docker compose config --quiet
+docker compose --profile real --profile test config --quiet
+docker compose up --build --detach app
+docker compose ps
+python scripts/container_smoke.py
+```
+
+The browser endpoint is `http://127.0.0.1:8765/`. The port is published only on host loopback. To use another host port, set `GFMT_DEMO_PORT` before starting Compose.
+
+Confirm SQLite persistence across a container restart:
+
+```powershell
+docker compose restart app
+python scripts/container_smoke.py --verify-cache
+```
+
+Run the deterministic suite inside the same image without external network access:
+
+```powershell
+docker compose --profile test run --rm tests
+```
+
+Stop containers without deleting named volumes:
+
+```powershell
+docker compose down
+```
+
+The `real` profile is explicit and uses separate database and authentication volumes. If a private cache already exists on the Windows host, the optional override mounts that single file into the container without copying it into the image:
+
+```powershell
+$env:GFMT_HOST_AUTH_FILE = (Resolve-Path .\Auth\secrets.json).Path
+docker compose --profile real stop app-real
+docker compose -f compose.yaml -f compose.host-auth.yaml --profile real config --quiet
+docker compose -f compose.yaml -f compose.host-auth.yaml --profile real up --build --detach app-real
+```
+
+The application is then available at `http://127.0.0.1:8766/`. This override does not create or repair authentication: the cache must already be valid. Never display, copy, share or commit it. Automated login is intentionally not provided because Google rejects software-controlled sign-in.
+
+Cloud deployment must use a single application replica while SQLite is active and must place the container behind authenticated TLS ingress. The image is not safe to publish directly to the internet. See [CONTAINER_RUNTIME.md](CONTAINER_RUNTIME.md) for the complete runtime and security contract.
+
 ### Architecture and API
 
 The application is split into domain, application, infrastructure and presentation layers. SQLite migrations live in `migrations/`; the versioned localhost API is under `/api/v1`. The complete component map, contracts and incremental plan are maintained in [arquitetura.md](arquitetura.md).
 
 ### Privacy and security
 
-- the HTTP server accepts loopback binds only;
+- the HTTP server accepts loopback binds by default; container bind requires explicit opt-in and exact Host/Origin allowlists;
 - mutating endpoints validate `Host`, `Origin` and an ephemeral CSRF token;
 - canonical Google IDs, credentials and raw payloads do not cross the presentation boundary;
 - automated tests use synthetic identities and coordinates;

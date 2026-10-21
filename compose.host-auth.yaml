@@ -1,0 +1,7 @@
+services:
+  app-real:
+    volumes:
+      - gfmt-real-data:/data
+      - type: bind
+        source: ${GFMT_HOST_AUTH_FILE:?Set GFMT_HOST_AUTH_FILE to the existing private host cache file}
+        target: /state/auth/secrets.json

@@ -37,6 +37,7 @@ def get_cached_value(name: str):
 
 def set_cached_value(name: str, value: str):
     secrets_file = _get_secrets_file()
+    os.makedirs(os.path.dirname(secrets_file), exist_ok=True)
 
     if os.path.exists(secrets_file):
         with open(secrets_file, 'r') as file:
@@ -52,5 +53,8 @@ def set_cached_value(name: str, value: str):
 
 
 def _get_secrets_file():
+    configured_file = os.environ.get("GFMT_AUTH_FILE", "").strip()
+    if configured_file:
+        return os.path.abspath(os.path.expanduser(configured_file))
     script_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(script_dir, SECRETS_FILE)

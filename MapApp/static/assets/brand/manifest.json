@@ -1,0 +1,22 @@
+{
+  "brand": "Kezpo Solutions",
+  "retrieved_at": "2026-10-21",
+  "runtime_policy": "local-only",
+  "usage_notice": "Official brand assets copied from the Kezpo Solutions website. Trademark and reuse rights remain with their owner.",
+  "assets": [
+    {
+      "file": "kezpo-logo.webp",
+      "source_url": "https://kezposolutions.com/assets/logo-kezpo-DNm21ieP.webp",
+      "media_type": "image/webp",
+      "bytes": 18108,
+      "sha256": "eba289398cef30e71f3f3f732cdccbeae13f5d2661e7313323ca5eab14e2fad5"
+    },
+    {
+      "file": "kezpo-favicon.png",
+      "source_url": "https://kezposolutions.com/favicon.png",
+      "media_type": "image/png",
+      "bytes": 8581,
+      "sha256": "03fd1dfd4e13fb3173d23c47d84bff464207f4ff900040eca6fd4918076fd2ca"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "retrieved_at": "2026-10-21",
+  "runtime_policy": "local-only",
+  "license": "SIL Open Font License 1.1",
+  "fonts": [
+    {
+      "family": "Inter",
+      "file": "Inter-Variable.ttf",
+      "weight_range": "100 900",
+      "axes": ["opsz", "wght"],
+      "source_url": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf",
+      "license_file": "OFL-Inter.txt",
+      "bytes": 876576,
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031"
+    },
+    {
+      "family": "Outfit",
+      "file": "Outfit-Variable.ttf",
+      "weight_range": "100 900",
+      "axes": ["wght"],
+      "source_url": "https://raw.githubusercontent.com/google/fonts/main/ofl/outfit/Outfit%5Bwght%5D.ttf",
+      "license_file": "OFL-Outfit.txt",
+      "bytes": 110884,
+      "sha256": "fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade"
+    }
+  ]
+}
